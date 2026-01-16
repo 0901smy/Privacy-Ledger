@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ .title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+        }
+        /*.action-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }*/
+        .topbar {
+            height: 52px;
+            background: #3478f6;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+        .topbar-title {
+            font-size: 18px;
+        }
+        .topbar-user {
+            font-size: 14px;
+        }
+        .topbar-user a {
+            color: #fff;
+            text-decoration: none;
+            margin-right: 12px;
+            font-size: 13px;
+        }
+        .container {
+            max-width: 960px;
+            margin: 24px auto;
+            padding: 0 16px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.04);
+            box-sizing: border-box;
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .filter-row label {
+            color: #555;
+        }
+        .filter-row input[type="date"],
+        .filter-row input[type="text"] {
+            padding: 4px 6px;
+            font-size: 13px;
+        }
+        .btn {
+            border: none;
+            background: #3478f6;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn:disabled {
+            background: #aac4ff;
+            cursor: not-allowed;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #eceff5;
+            text-align: left;
+            white-space: nowrap;
+        }
+        th {
+            background: #f3f5f9;
+            color: #555;
+        }
+        td.action {
+            white-space: normal;
+        }
+        .error {
+            color: #e53935;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .empty {
+            padding: 12px 0;
+            color: #999;
+            font-size: 13px;
+        }
+        .pager {
+            margin-top: 10px;
+            font-size: 13px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            align-items: center;
+            color: #555;
+        }
+        .pager button {
+            padding: 4px 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div class="topbar-title">个人记账系统 - 操作日志</div>
+    <div class="topbar-user">
+        <a href="/history">返回历史操作</a>
+        <a href="/dashboard">返回主页</a>
+        <span id="user-name"></span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h2>操作日志</h2>
+        
+        <div class="filter-row">
+            <label>开始日期：
+                <input type="date" id="filter-start">
+            </label>
+            <label>结束日期：
+                <input type="date" id="filter-end">
+            </label>
+            <label>关键字：
+                <input type="text" id="filter-q" placeholder="方法关键字">
+            </label>
+            <button id="filter-apply" class="btn" type="button">查询</button>
+        </div>
+
+        <div id="log-error" class="error"></div>
+
+        <div id="log-empty" class="empty" style="display:none;">暂无日志记录。</div>
+
+        <table id="log-table" style="display:none;">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>时间</th>
+                <th>方法</th>
+                <!-- <th>路径</th> -->
+                <th>动作</th>
+                <th>IP</th>
+            </tr>
+            </thead>
+            <tbody id="log-tbody"></tbody>
+        </table>
+
+        <div class="pager" id="log-pager" style="display:none;">
+            <button id="page-prev" class="btn" type="button">上一页</button>
+            <span id="page-info"></span>
+            <button id="page-next" class="btn" type="button">下一页</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const userNameEl = document.getElementById('user-name');
+
+    const filterStart = document.getElementById('filter-start');
+    const filterEnd = document.getElementById('filter-end');
+    const filterQ = document.getElementById('filter-q');
+    const filterApply = document.getElementById('filter-apply');
+
+    const logErr = document.getElementById('log-error');
+    const logEmpty = document.getElementById('log-empty');
+    const logTable = document.getElementById('log-table');
+    const logTbody = document.getElementById('log-tbody');
+
+    const pager = document.getElementById('log-pager');
+    const pagePrev = document.getElementById('page-prev');
+    const pageNext = document.getElementById('page-next');
+    const pageInfo = document.getElementById('page-info');
+
+    function gotoLogin() {
+        window.location.href = '/';
+    }
+
+    const token = localStorage.getItem('pl_token');
+    if (!token) {
+        gotoLogin();
+        return;
+    }
+
+    let currentPage = 1;
+    let pageSize = 20;
+    let total = 0;
+
+    function loadUser() {
+        // 简单显示昵称/用户名
+        fetch('/api/me', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                userNameEl.textContent = '未登录';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            if (res.data && res.data.user) {
+                const u = res.data.user;
+                userNameEl.textContent = u.display_name || u.username;
+            }
+        }).catch(function () {
+            userNameEl.textContent = '加载用户信息失败';
+        });
+    }
+
+    function loadLogs(page) {
+        logErr.textContent = '';
+        logEmpty.style.display = 'none';
+        logTable.style.display = 'none';
+        pager.style.display = 'none';
+        logTbody.innerHTML = '';
+
+        currentPage = page || 1;
+
+        const params = new URLSearchParams();
+        params.set('page', String(currentPage));
+        params.set('page_size', String(pageSize));
+        if (filterStart.value) {
+            params.set('start', filterStart.value);
+        }
+        if (filterEnd.value) {
+            params.set('end', filterEnd.value);
+        }
+        if (filterQ.value.trim()) {
+            params.set('q', filterQ.value.trim());
+        }
+
+        fetch('/api/logs?' + params.toString(), {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                logErr.textContent = res.message || '加载日志失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+
+            const data = res.data || {};
+            const items = data.items || [];
+            total = data.total || 0;
+            pageSize = data.size || 20;
+            currentPage = data.page || 1;
+
+            if (!items.length) {
+                logEmpty.style.display = 'block';
+                return;
+            }
+
+            items.forEach(function (l) {
+                const tr = document.createElement('tr');
+
+                const tdId = document.createElement('td');
+                tdId.textContent = l.id;
+
+                const tdTime = document.createElement('td');
+                tdTime.textContent = (l.created_at || '').replace('T', ' ').slice(0, 19);
+
+                const tdMethod = document.createElement('td');
+                tdMethod.textContent = l.method;
+
+                // const tdPath = document.createElement('td');
+                // tdPath.textContent = l.path;
+
+                const tdAction = document.createElement('td');
+                tdAction.className = 'action';
+                tdAction.textContent = l.action || '';
+
+                const tdIP = document.createElement('td');
+                tdIP.textContent = l.ip || '';
+
+                tr.appendChild(tdId);
+                tr.appendChild(tdTime);
+                tr.appendChild(tdMethod);
+                // tr.appendChild(tdPath);
+                tr.appendChild(tdAction);
+                tr.appendChild(tdIP);
+
+                logTbody.appendChild(tr);
+            });
+
+            logTable.style.display = 'table';
+
+            // 分页信息
+            const totalPage = Math.max(1, Math.ceil(total / pageSize));
+            pager.style.display = 'flex';
+            pageInfo.textContent = '第 ' + currentPage + ' / ' + totalPage + ' 页，共 ' + total + ' 条';
+
+            pagePrev.disabled = currentPage <= 1;
+            pageNext.disabled = currentPage >= totalPage;
+        }).catch(function (err) {
+            console.error(err);
+            logErr.textContent = '网络或服务器异常';
+        });
+    }
+
+    filterApply.addEventListener('click', function () {
+        loadLogs(1);
+    });
+
+    pagePrev.addEventListener('click', function () {
+        if (currentPage > 1) {
+            loadLogs(currentPage - 1);
+        }
+    });
+
+    pageNext.addEventListener('click', function () {
+        const totalPage = Math.max(1, Math.ceil(total / pageSize));
+        if (currentPage < totalPage) {
+            loadLogs(currentPage + 1);
+        }
+    });
+
+    loadUser();
+    loadLogs(1);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ .title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+        }
+        .topbar {
+            height: 52px;
+            background: #3478f6;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+        .topbar-title {
+            font-size: 18px;
+        }
+        .topbar-user {
+            font-size: 14px;
+        }
+        .topbar-user a {
+            color: #fff;
+            text-decoration: none;
+            margin-right: 12px;
+            font-size: 13px;
+        }
+        .container {
+            max-width: 640px;
+            margin: 24px auto;
+            padding: 0 16px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.04);
+            box-sizing: border-box;
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+        .meta-row {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 6px;
+        }
+        .meta-row span.label {
+            color: #888;
+            display: inline-block;
+            width: 100px;
+        }
+        .form-item {
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .form-item label {
+            display: block;
+            margin-bottom: 4px;
+            color: #444;
+        }
+        .form-item input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 7px 9px;
+            border-radius: 4px;
+            border: 1px solid #d3d7e0;
+            font-size: 14px;
+            outline: none;
+        }
+        .form-item input:focus {
+            border-color: #3478f6;
+            box-shadow: 0 0 0 2px rgba(52,120,246,.15);
+        }
+        .btn {
+            border: none;
+            background: #3478f6;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-danger {
+            background: #e53935;
+        }
+        .btn:disabled {
+            background: #aac4ff;
+            cursor: not-allowed;
+        }
+        .error {
+            color: #e53935;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+        .tips {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #777;
+        }
+        hr {
+            margin: 16px 0;
+            border: none;
+            border-top: 1px solid #eceff5;
+        }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div class="topbar-title">个人记账系统 - 账户设置</div>
+    <div class="topbar-user">
+        <a href="/dashboard">返回主页</a>
+        <span id="user-name">加载中...</span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h2>账户信息</h2>
+        <div class="meta-row">
+            <span class="label">用户名：</span>
+            <span id="meta-username"></span>
+        </div>
+        <div class="meta-row">
+            <span class="label">昵称：</span>
+            <span id="meta-display-name"></span>
+        </div>
+        <div class="meta-row">
+            <span class="label">创建时间：</span>
+            <span id="meta-created-at"></span>
+        </div>
+        <div id="user-error" class="error"></div>
+
+        <hr>
+
+        <form id="profile-form" style="margin-bottom:10px;">
+            <div class="form-item">
+                <label for="profile-display-name">修改昵称</label>
+                <input id="profile-display-name" type="text" maxlength="64" placeholder="新的昵称（可留空）">
+            </div>
+            <button id="profile-save" class="btn" type="submit">保存资料</button>
+            <div id="profile-error" class="error"></div>
+        </form>
+
+        <hr>
+
+        <form id="password-form">
+            <div class="form-item">
+                <label for="password-old">原密码</label>
+                <input id="password-old" type="password" placeholder="当前密码">
+            </div>
+            <div class="form-item">
+                <label for="password-new">新密码（8-32位，含大小写字母和数字）</label>
+                <input id="password-new" type="password" placeholder="新密码">
+            </div>
+            <div class="form-item">
+                <label for="password-confirm">确认新密码</label>
+                <input id="password-confirm" type="password" placeholder="再次输入新密码">
+            </div>
+            <button id="password-save" class="btn btn-danger" type="submit">修改密码</button>
+            <div id="password-error" class="error"></div>
+            <div class="tips">
+                修改密码后将自动退出登录，需要使用新密码重新登录。
+            </div>
+        </form>
+        <hr>
+        <div id="delete-section">
+            <h3 style="font-size:16px;margin-top:0;">注销账号</h3>
+            <p style="font-size:13px;color:#666;">
+                注销后，账号将在 <strong>7 天内</strong> 进入删除缓冲期。<br>
+                期间可以重新登录以撤销注销。超过 7 天后，账号和所有数据将被永久删除。
+            </p>
+            <button id="delete-btn" class="btn btn-danger" type="button">注销账号</button>
+            <div id="delete-error" class="error"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const TOKEN_KEY = 'pl_token';
+
+    const deleteBtn = document.getElementById('delete-btn');
+    const deleteErr = document.getElementById('delete-error');
+
+    const userNameEl = document.getElementById('user-name');
+    const u1 = document.getElementById('meta-username');
+    const u2 = document.getElementById('meta-display-name');
+    const u3 = document.getElementById('meta-created-at');
+    const userErr = document.getElementById('user-error');
+
+    const profileForm = document.getElementById('profile-form');
+    const profileDisplayName = document.getElementById('profile-display-name');
+    const profileSaveBtn = document.getElementById('profile-save');
+    const profileErr = document.getElementById('profile-error');
+
+    const passwordForm = document.getElementById('password-form');
+    const passwordOld = document.getElementById('password-old');
+    const passwordNew = document.getElementById('password-new');
+    const passwordConfirm = document.getElementById('password-confirm');
+    const passwordSaveBtn = document.getElementById('password-save');
+    const passwordErr = document.getElementById('password-error');
+
+    function gotoLogin() {
+        window.location.href = '/';
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+        gotoLogin();
+        return;
+    }
+
+    function loadUser() {
+        userErr.textContent = '';
+        fetch('/api/me', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                userErr.textContent = res.message || '加载用户信息失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            if (!res.data || !res.data.user) {
+                userErr.textContent = '返回数据不完整';
+                return;
+            }
+            const u = res.data.user;
+            userNameEl.textContent = u.display_name || u.username;
+            u1.textContent = u.username;
+            u2.textContent = u.display_name || '-';
+            u3.textContent = (u.created_at || '-').split('T')[0];
+            profileDisplayName.value = u.display_name || '';
+        }).catch(function (err) {
+            console.error(err);
+            userErr.textContent = '网络或服务器异常';
+        });
+    }
+
+    profileForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        profileErr.textContent = '';
+
+        const name = profileDisplayName.value.trim();
+        profileSaveBtn.disabled = true;
+        profileSaveBtn.textContent = '保存中...';
+
+        fetch('/api/profile', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ display_name: name })
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                profileErr.textContent = res.message || '保存失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            if (res.data && res.data.user) {
+                const u = res.data.user;
+                userNameEl.textContent = u.display_name || u.username;
+                u2.textContent = u.display_name || '-';
+            }
+        }).catch(function (err) {
+            console.error(err);
+            profileErr.textContent = '网络或服务器异常';
+        }).finally(function () {
+            profileSaveBtn.disabled = false;
+            profileSaveBtn.textContent = '保存资料';
+        });
+    });
+
+    passwordForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        passwordErr.textContent = '';
+
+        const oldPwd = passwordOld.value;
+        const newPwd = passwordNew.value;
+        const confirmPwd = passwordConfirm.value;
+
+        if (!oldPwd || !newPwd || !confirmPwd) {
+            passwordErr.textContent = '请完整填写原密码和新密码';
+            return;
+        }
+        if (newPwd.length < 8 || newPwd.length > 32) {
+            passwordErr.textContent = '新密码长度需 8-32 位';
+            return;
+        }
+        const strongPwdRe = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,32}$/;
+        if (!strongPwdRe.test(newPwd)) {
+            passwordErr.textContent = '新密码需包含大写、小写字母和数字';
+            return;
+        }
+        if (newPwd !== confirmPwd) {
+            passwordErr.textContent = '两次输入的新密码不一致';
+            return;
+        }
+
+        passwordSaveBtn.disabled = true;
+        passwordSaveBtn.textContent = '提交中...';
+
+        fetch('/api/profile/password', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                old_password: oldPwd,
+                new_password: newPwd
+            })
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                passwordErr.textContent = res.message || '修改密码失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            passwordOld.value = '';
+            passwordNew.value = '';
+            passwordConfirm.value = '';
+            alert('密码已修改，请使用新密码重新登录。');
+            localStorage.removeItem(TOKEN_KEY);
+            gotoLogin();
+        }).catch(function (err) {
+            console.error(err);
+            passwordErr.textContent = '网络或服务器异常';
+        }).finally(function () {
+            passwordSaveBtn.disabled = false;
+            passwordSaveBtn.textContent = '修改密码';
+        });
+    });
+
+    deleteBtn.addEventListener('click', function () {
+        deleteErr.textContent = '';
+
+        if (!confirm('确认注销账号吗？注销后有 7 天缓冲期，期间重新登录可恢复。')) {
+            return;
+        }
+        if (!confirm('再次确认：注销账号后，7 天内未登录将永久删除所有数据。')) {
+            return;
+        }
+
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = '提交中...';
+
+        fetch('/api/profile/delete', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                deleteErr.textContent = res.message || '注销失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            alert('账号已提交注销。7 天内重新登录可恢复，超时将永久删除。');
+            localStorage.removeItem(TOKEN_KEY);
+            gotoLogin();
+        }).catch(function (err) {
+            console.error(err);
+            deleteErr.textContent = '网络或服务器异常';
+        }).finally(function () {
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = '注销账号';
+        });
+    });
+
+    loadUser();
+})();
+</script>
+</body>
+</html>

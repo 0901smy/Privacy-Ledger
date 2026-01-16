@@ -1,0 +1,27 @@
+server:
+  address: "0.0.0.0"
+  port: 8080
+  mode: "release"     # gin mode: debug/release
+
+database:
+  path: "./data/ledger.db"
+  log_mode: false     # gorm log
+
+jwt:
+  secret: "change-this-to-a-very-strong-secret"  # please change in production
+  issuer: "privacy-ledger"
+  expire_hours: 24
+
+security:
+  bcrypt_cost: 10
+  encryption_key: "0123456789abcdef0123456789abcdef" # 32 bytes for AES-256
+
+log:
+  file: "./logs/app.log"
+  level: "info"       # debug/info/warn/error
+
+backup:
+  dir: "./backups"
+
+app:
+  page_size: 20       # default pagination size

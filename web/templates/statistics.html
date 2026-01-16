@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ .title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+        }
+        .topbar {
+            height: 52px;
+            background: #3478f6;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+        .topbar-title {
+            font-size: 18px;
+        }
+        .topbar-user {
+            font-size: 14px;
+        }
+        .topbar-user a {
+            color: #fff;
+            text-decoration: none;
+            margin-right: 12px;
+            font-size: 13px;
+        }
+        .container {
+            max-width: 960px;
+            margin: 24px auto;
+            padding: 0 16px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.04);
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+        .month-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .month-selector input {
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #d3d7e0;
+            font-size: 14px;
+        }
+        .btn {
+            border: none;
+            background: #3478f6;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .summary {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 16px;
+        }
+        .summary span {
+            font-weight: 500;
+        }
+        .calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .calendar-table th {
+            background: #f3f5f9;
+            padding: 8px 4px;
+            text-align: center;
+            color: #555;
+            border: 1px solid #e0e3eb;
+        }
+        .calendar-table td {
+            padding: 8px 4px;
+            text-align: center;
+            border: 1px solid #e0e3eb;
+            vertical-align: top;
+            height: 60px;
+        }
+        .calendar-table td.empty {
+            background: #fafafa;
+        }
+        .calendar-table td.positive {
+            background: #ffe0e6; /* 粉色：支出<收入 */
+        }
+        .calendar-table td.negative {
+            background: #e8f5e9; /* 淡绿色：收入<支出 */
+        }
+        .calendar-table .day-num {
+            font-weight: 500;
+            color: #333;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .calendar-table .day-balance {
+            font-size: 11px;
+            color: #666;
+        }
+        .category-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 12px;
+        }
+        .category-table th, .category-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #eceff5;
+            text-align: left;
+        }
+        .category-table th {
+            background: #f3f5f9;
+            color: #555;
+        }
+        .error {
+            color: #e53935;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        #pie-chart {
+            max-width: 400px;
+            margin: 16px auto;
+        }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div class="topbar-title">个人记账系统 - 数据统计</div>
+    <div class="topbar-user">
+        <a href="/dashboard">返回主页</a>
+        <span id="user-name"></span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h2>月度统计</h2>
+        <div class="month-selector">
+            <label>选择月份：
+                <input type="month" id="month-input">
+            </label>
+            <button id="load-btn" class="btn" type="button">查询</button>
+        </div>
+        <div class="summary" id="summary"></div>
+        <div id="stats-error" class="error"></div>
+
+        <table class="calendar-table" id="calendar-table">
+            <thead>
+            <tr>
+                <th>周日</th>
+                <th>周一</th>
+                <th>周二</th>
+                <th>周三</th>
+                <th>周四</th>
+                <th>周五</th>
+                <th>周六</th>
+            </tr>
+            </thead>
+            <tbody id="calendar-tbody"></tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>类别统计</h2>
+        <table class="category-table" id="category-table">
+            <thead>
+            <tr>
+                <th>类别</th>
+                <th>收入</th>
+                <th>支出</th>
+                <th>结余</th>
+            </tr>
+            </thead>
+            <tbody id="category-tbody"></tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>类别占比</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 24px; justify-content: center;">
+            <div style="text-align: center;">
+                <h3 style="font-size: 15px; margin: 0 0 12px; color: #555;">支出分布</h3>
+                <canvas id="expense-pie-chart" width="380" height="380"></canvas>
+            </div>
+            <div style="text-align: center;">
+                <h3 style="font-size: 15px; margin: 0 0 12px; color: #555;">收入分布</h3>
+                <canvas id="income-pie-chart" width="380" height="380"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    const TOKEN_KEY = 'pl_token';
+
+    const userNameEl = document.getElementById('user-name');
+    const monthInput = document.getElementById('month-input');
+    const loadBtn = document.getElementById('load-btn');
+    const summaryEl = document.getElementById('summary');
+    const statsErr = document.getElementById('stats-error');
+    const calendarTbody = document.getElementById('calendar-tbody');
+    const categoryTbody = document.getElementById('category-tbody');
+    const expensePieCanvas = document.getElementById('expense-pie-chart');
+    const incomePieCanvas = document.getElementById('income-pie-chart');
+
+
+    function gotoLogin() {
+        window.location.href = '/';
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+        gotoLogin();
+        return;
+    }
+
+    // 默认当前月
+    const now = new Date();
+    monthInput.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+    function loadUser() {
+        fetch('/api/me', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            if (res.data && res.data.user) {
+                const u = res.data.user;
+                userNameEl.textContent = u.display_name || u.username;
+            }
+        }).catch(function () {});
+    }
+
+    function loadStats() {
+        statsErr.textContent = '';
+        summaryEl.textContent = '';
+        calendarTbody.innerHTML = '';
+        categoryTbody.innerHTML = '';
+
+        const month = monthInput.value;
+        if (!month) {
+            statsErr.textContent = '请选择月份';
+            return;
+        }
+
+        loadBtn.disabled = true;
+        loadBtn.textContent = '查询中...';
+
+        fetch('/api/stats/monthly?month=' + encodeURIComponent(month), {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                statsErr.textContent = res.message || '查询失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+
+            const data = res.data || {};
+            summaryEl.innerHTML = '本月收入：<span>' + (data.total_income || '0.00') + '</span> 元 | ' +
+                '支出：<span>' + (data.total_expense || '0.00') + '</span> 元 | ' +
+                '结余：<span>' + (data.total_balance || '0.00') + '</span> 元';
+
+            renderCalendar(month, data.daily || []);
+            renderCategoryTable(data.by_category || []);
+            renderExpensePieChart(data.by_category || []);
+            renderIncomePieChart(data.by_category || []);
+
+        }).catch(function (err) {
+            console.error(err);
+            statsErr.textContent = '网络或服务器异常';
+        }).finally(function () {
+            loadBtn.disabled = false;
+            loadBtn.textContent = '查询';
+        });
+    }
+
+    function renderCalendar(monthStr, dailyList) {
+        const parts = monthStr.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+
+        const firstDay = new Date(year, month - 1, 1);
+        const lastDay = new Date(year, month, 0);
+        const daysInMonth = lastDay.getDate();
+        const startWeekday = firstDay.getDay(); // 0=周日
+
+        // 构造日期到数据的映射
+        const dailyMap = {};
+        dailyList.forEach(function (d) {
+            dailyMap[d.date] = d;
+        });
+
+        let html = '';
+        let currentDay = 1;
+        let done = false;
+
+        for (let week = 0; week < 6; week++) {
+            html += '<tr>';
+            for (let col = 0; col < 7; col++) {
+                if (week === 0 && col < startWeekday) {
+                    html += '<td class="empty"></td>';
+                } else if (currentDay > daysInMonth) {
+                    html += '<td class="empty"></td>';
+                    done = true;
+                } else {
+                    const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(currentDay).padStart(2, '0');
+                    const d = dailyMap[dateStr];
+
+                    let className = '';
+                    let balanceText = '';
+                    if (d) {
+                        const bal = d.balance_cent || 0;
+                        if (bal > 0) {
+                            className = 'positive';
+                        } else if (bal < 0) {
+                            className = 'negative';
+                        }
+                        balanceText = '<span class="day-balance">' + (d.balance || '0.00') + '</span>';
+                    }
+
+                    html += '<td class="' + className + '">';
+                    html += '<span class="day-num">' + currentDay + '</span>';
+                    html += balanceText;
+                    html += '</td>';
+                    currentDay++;
+                }
+            }
+            html += '</tr>';
+            if (done) break;
+        }
+
+        calendarTbody.innerHTML = html;
+    }
+
+    function renderCategoryTable(catList) {
+        if (!catList.length) {
+            categoryTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;">暂无数据</td></tr>';
+            return;
+        }
+
+        let html = '';
+        catList.forEach(function (c) {
+            const balanceVal = parseFloat(c.balance || '0');
+            let balanceColor = '#000';
+            if (balanceVal > 0) {
+                balanceColor = '#c25450'; // 红色
+            } else if (balanceVal < 0) {
+                balanceColor = '#5a9174'; // 绿色
+            }
+
+            html += '<tr>';
+            html += '<td>' + (c.category || '-') + '</td>';
+            html += '<td style="color:#c25450;">' + (c.income || '0.00') + '</td>'; // 收入红色
+            html += '<td style="color:#5a9174;">' + (c.expense || '0.00') + '</td>'; // 支出绿色
+            html += '<td style="color:' + balanceColor + ';">' + (c.balance || '0.00') + '</td>'; // 结余按正负
+            html += '</tr>';
+        });
+        categoryTbody.innerHTML = html;
+    }
+
+    function renderExpensePieChart(catList) {
+    const expenseList = catList.filter(function (c) {
+        return c.expense_cent > 0;
+    });
+
+    const ctx = expensePieCanvas.getContext('2d');
+        ctx.clearRect(0, 0, expensePieCanvas.width, expensePieCanvas.height);
+
+        if (!expenseList.length) {
+            ctx.fillStyle = '#999';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('本月无支出数据', expensePieCanvas.width / 2, expensePieCanvas.height / 2);
+            return;
+        }
+
+        let total = 0;
+        expenseList.forEach(function (c) {
+            total += c.expense_cent;
+        });
+
+        const colors = [
+            '#7ba591', '#92b5a0', '#6b9981', '#a3c6af', '#85a895',
+            '#78a68d', '#8fb9a1', '#6d9b84', '#99bdaa', '#7fa090'
+        ];
+
+        const cx = expensePieCanvas.width / 2;
+        const cy = expensePieCanvas.height / 2.5; // 饼图上移
+        const radius = Math.min(cx, cy) - 20; // 稍微缩小
+
+        // 绘制饼图
+        let currentAngle = -Math.PI / 2;
+        expenseList.forEach(function (c, i) {
+            const ratio = c.expense_cent / total;
+            const sliceAngle = ratio * 2 * Math.PI;
+
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius, currentAngle, currentAngle + sliceAngle);
+            ctx.closePath();
+            ctx.fill();
+
+            currentAngle += sliceAngle;
+        });
+
+        // 绘制下方图例
+        const legendStartY = cy + radius + 30;
+        const legendItemHeight = 22;
+        const legendColumns = 2; // 两列
+        const columnWidth = expensePieCanvas.width / legendColumns;
+
+        ctx.font = '13px sans-serif';
+        ctx.textAlign = 'left';
+
+        expenseList.forEach(function (c, i) {
+            const ratio = c.expense_cent / total;
+            const pct = (ratio * 100).toFixed(1);
+        
+            const column = i % legendColumns;
+            const row = Math.floor(i / legendColumns);
+            const x = column * columnWidth + 30;
+            const y = legendStartY + row * legendItemHeight;
+
+            // 颜色方块
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.fillRect(x, y - 10, 14, 14);
+
+            // 文字
+            ctx.fillStyle = '#333';
+            ctx.fillText(c.category + ' ' + pct + '%', x + 20, y);
+        });
+    }
+
+    function renderIncomePieChart(catList) {
+        const incomeList = catList.filter(function (c) {
+            return c.income_cent > 0;
+        });
+
+        const ctx = incomePieCanvas.getContext('2d');
+        ctx.clearRect(0, 0, incomePieCanvas.width, incomePieCanvas.height);
+
+        if (!incomeList.length) {
+            ctx.fillStyle = '#999';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('本月无收入数据', incomePieCanvas.width / 2, incomePieCanvas.height / 2);
+            return;
+        }
+
+        let total = 0;
+        incomeList.forEach(function (c) {
+            total += c.income_cent;
+        });
+
+        const colors = [
+            '#c9847e', '#d49791', '#b87873', '#dfa9a4', '#c28d88',
+            '#ca8b85', '#d19a95', '#b97f7a', '#d8a39e', '#c58983'
+        ];
+
+        const cx = incomePieCanvas.width / 2;
+        const cy = incomePieCanvas.height / 2.5; // 饼图上移
+        const radius = Math.min(cx, cy) - 20;
+
+        // 绘制饼图
+        let currentAngle = -Math.PI / 2;
+        incomeList.forEach(function (c, i) {
+            const ratio = c.income_cent / total;
+            const sliceAngle = ratio * 2 * Math.PI;
+
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius, currentAngle, currentAngle + sliceAngle);
+            ctx.closePath();
+            ctx.fill();
+
+            currentAngle += sliceAngle;
+        });
+
+        // 绘制下方图例
+        const legendStartY = cy + radius + 30;
+        const legendItemHeight = 22;
+        const legendColumns = 2;
+        const columnWidth = incomePieCanvas.width / legendColumns;
+
+        ctx.font = '13px sans-serif';
+        ctx.textAlign = 'left';
+
+        incomeList.forEach(function (c, i) {
+            const ratio = c.income_cent / total;
+            const pct = (ratio * 100).toFixed(1);
+        
+            const column = i % legendColumns;
+            const row = Math.floor(i / legendColumns);
+            const x = column * columnWidth + 30;
+            const y = legendStartY + row * legendItemHeight;
+
+            // 颜色方块
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.fillRect(x, y - 10, 14, 14);
+
+            // 文字
+            ctx.fillStyle = '#333';
+            ctx.fillText(c.category + ' ' + pct + '%', x + 20, y);
+        });
+    }
+
+    loadBtn.addEventListener('click', loadStats);
+
+    loadUser();
+    loadStats();
+})();
+</script>
+</body>
+</html>

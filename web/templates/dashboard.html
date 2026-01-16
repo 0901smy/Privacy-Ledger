@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ .title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+        }
+        .topbar {
+            height: 52px;
+            background: #3478f6;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+        .topbar-title {
+            font-size: 18px;
+        }
+        .topbar-user {
+            font-size: 14px;
+        }
+        .topbar-user a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            margin-right: 12px;
+        }
+        .container {
+            max-width: 960px;
+            margin: 24px auto;
+            padding: 0 16px;
+            box-sizing: border-box;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.04);
+            box-sizing: border-box;
+        }
+        .card-half {
+            flex: 1 1 320px;
+        }
+        .card-full {
+            flex: 1 1 100%;
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+        .meta-row {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 6px;
+        }
+        .meta-row span.label {
+            color: #888;
+            display: inline-block;
+            width: 90px;
+        }
+        .error {
+            color: #e53935;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .btn {
+            border: none;
+            background: #3478f6;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-danger {
+            background: #e53935;
+        }
+        .btn:disabled {
+            background: #aac4ff;
+            cursor: not-allowed;
+        }
+        .form-item {
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .form-item label {
+            display: block;
+            margin-bottom: 4px;
+            color: #444;
+        }
+        .form-item input,
+        .form-item select,
+        .form-item textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 7px 9px;
+            border-radius: 4px;
+            border: 1px solid #d3d7e0;
+            font-size: 14px;
+            outline: none;
+        }
+        .form-item input:focus,
+        .form-item select:focus,
+        .form-item textarea:focus {
+            border-color: #3478f6;
+            box-shadow: 0 0 0 2px rgba(52,120,246,.15);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #eceff5;
+            text-align: left;
+            white-space: nowrap;
+        }
+        th {
+            background: #f3f5f9;
+            color: #555;
+        }
+        td.note {
+            white-space: normal;
+        }
+        .amount-income {
+            color: #e53935;
+        }
+        .amount-expense {
+            color: #2e7d32;
+        }
+        .empty {
+            padding: 12px 0;
+            color: #999;
+            font-size: 13px;
+        }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .filter-row label {
+            color: #555;
+        }
+        .filter-row input[type="date"] {
+            padding: 4px 6px;
+            font-size: 13px;
+        }
+        .summary-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            color: #444;
+        }
+        .summary-item span.label {
+            color: #888;
+        }
+        .category-summary {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #555;
+        }
+        .backup-list {
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        .backup-list table {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div class="topbar-title">个人记账系统</div>
+    <div class="topbar-user">
+        <a href="/statistics">数据统计</a>
+        <a href="/history">历史操作</a>
+        <a href="/account">账户设置</a>
+        <span id="user-name">加载中...</span>
+        &nbsp;|&nbsp;
+        <button id="logout-btn" class="btn btn-danger">退出</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="card card-half">
+            <h2>账户概览</h2>
+            <div class="meta-row">
+                <span class="label">用户名：</span>
+                <span id="meta-username"></span>
+            </div>
+            <div class="meta-row">
+                <span class="label">昵称：</span>
+                <span id="meta-display-name"></span>
+            </div>
+            <div class="meta-row">
+                <span class="label">创建时间：</span>
+                <span id="meta-created-at"></span>
+            </div>
+            <div id="user-error" class="error"></div>
+            <p style="margin-top:10px;font-size:12px;color:#777;">
+                如需修改昵称或密码，请点击右上角“账户设置”进入账户页面。
+            </p>
+        </div>
+
+        <div class="card card-half">
+            <h2>记一笔</h2>
+            <form id="entry-form">
+                <div class="form-item">
+                    <label for="entry-type">类型</label>
+                    <select id="entry-type" required>
+                        <option value="expense">支出</option>
+                        <option value="income">收入</option>
+                    </select>
+                </div>
+                <div class="form-item">
+                    <label for="entry-category-select">类别</label>
+                    <select id="entry-category-select">
+                        <option value="">请选择类别</option>
+                        <option value="餐饮">餐饮</option>
+                        <option value="交通">交通</option>
+                        <option value="购物">购物</option>
+                        <option value="住房">住房</option>
+                        <option value="工资">工资</option>
+                        <option value="投资">投资</option>
+                        <option value="其他">其他</option>
+                    </select>
+                    <input id="entry-category-custom" type="text"
+                        placeholder="自定义类别（选择“其他”时必填）"
+                        style="margin-top:6px;display:none !important;">
+                </div>
+                <div class="form-item">
+                    <label for="entry-amount">金额（元）</label>
+                    <input id="entry-amount" type="number" step="0.01" min="0.01" placeholder="例如 12.34" required>
+                </div>
+                <div class="form-item">
+                    <label for="entry-date">日期</label>
+                    <input id="entry-date" type="date">
+                </div>
+                <div class="form-item">
+                    <label for="entry-note">备注（可选）</label>
+                    <textarea id="entry-note" rows="2" placeholder="简单说明这笔钱的用途"></textarea>
+                </div>
+                <button id="entry-submit" class="btn" type="submit">保存</button>
+                <div id="entry-error" class="error"></div>
+            </form>
+        </div>
+
+        <div class="card card-full">
+            <h2>最近账目</h2>
+
+            <div class="filter-row">
+                <label>开始日期：
+                    <input type="date" id="filter-start">
+                </label>
+                <label>结束日期：
+                    <input type="date" id="filter-end">
+                </label>
+                <label>类型：
+                    <select id="filter-type">
+                        <option value="">全部</option>
+                        <option value="income">收入</option>
+                        <option value="expense">支出</option>
+                    </select>
+                </label>
+                <label>排序：
+                    <select id="filter-sort">
+                        <option value="date_desc">日期(新→旧)</option>
+                        <option value="date_asc">日期(旧→新)</option>
+                        <option value="amount_desc">金额(高→低)</option>
+                        <option value="amount_asc">金额(低→高)</option>
+                    </select>
+                </label>
+                <button id="filter-apply" class="btn" type="button">应用筛选</button>
+            </div>
+
+            <div class="filter-row" style="margin-top:4px;">
+                <span>类别：</span>
+                <label><input type="checkbox" class="filter-category" value="餐饮">餐饮</label>
+                <label><input type="checkbox" class="filter-category" value="交通">交通</label>
+                <label><input type="checkbox" class="filter-category" value="购物">购物</label>
+                <label><input type="checkbox" class="filter-category" value="住房">住房</label>
+                <label><input type="checkbox" class="filter-category" value="工资">工资</label>
+                <label><input type="checkbox" class="filter-category" value="投资">投资</label>
+                <label><input type="checkbox" class="filter-category" value="其他">其他</label>
+            </div>
+
+            <div class="summary-row">
+                <div class="summary-item">
+                    <span class="label">本期收入：</span>
+                    <span id="sum-income">0.00</span> 元
+                </div>
+                <div class="summary-item">
+                    <span class="label">本期支出：</span>
+                    <span id="sum-expense">0.00</span> 元
+                </div>
+                <div class="summary-item">
+                    <span class="label">本期结余：</span>
+                    <span id="sum-balance">0.00</span> 元
+                </div>
+            </div>
+
+            <div class="category-summary" id="category-summary"></div>
+
+            <div id="list-error" class="error"></div>
+            <div id="entry-list-wrapper">
+                <div class="empty" id="entry-empty" style="display:none;">暂无记录，先在右侧记一笔试试。</div>
+                <table id="entry-table" style="display:none;">
+                    <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>类型</th>
+                        <th>类别</th>
+                        <th>金额</th>
+                        <th>备注</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody id="entry-tbody"></tbody>
+                </table>
+                <div id="pagination" style="display:none; margin-top:16px; text-align:center; font-size:13px;">
+                    <button id="page-prev" class="btn" style="margin:0 4px;">上一页</button>
+                    <span id="page-info" style="margin:0 12px; color:#555;"></span>
+                    <button id="page-next" class="btn" style="margin:0 4px;">下一页</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-full">
+            <h2>数据备份</h2>
+            <p style="font-size:13px;color:#666;">
+                备份文件是经过对称加密的二进制数据，只在本地保存。<br>
+                建议定期把备份文件拷贝到你自己信任的存储介质中。
+            </p>
+            <button id="backup-create" class="btn" type="button">生成备份</button>
+            <span id="backup-status" style="font-size:13px;margin-left:8px;color:#555;"></span>
+            <div id="backup-error" class="error"></div>
+
+            <div class="backup-list">
+                <table id="backup-table" style="display:none;">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>文件名</th>
+                        <th>大小</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody id="backup-tbody"></tbody>
+                </table>
+                <div id="backup-empty" class="empty" style="display:none;">暂无备份。</div>
+            </div>
+        </div>
+
+        <div class="card card-full">
+            <h2>数据导出</h2>
+            <p style="font-size:13px;color:#666;margin-bottom:12px;">
+                导出您的所有账目数据，支持 CSV 和 Excel 格式。
+            </p>
+            
+            <div>
+                <button id="export-csv" class="btn" type="button">导出 CSV</button>
+                <button id="export-xlsx" class="btn" type="button" style="margin-left:8px;">导出 Excel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const TOKEN_KEY = 'pl_token';
+
+    const userNameEl = document.getElementById('user-name');
+    const u1 = document.getElementById('meta-username');
+    const u2 = document.getElementById('meta-display-name');
+    const u3 = document.getElementById('meta-created-at');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userErr = document.getElementById('user-error');
+
+    const entryForm = document.getElementById('entry-form');
+    const entryType = document.getElementById('entry-type');
+    const entryCategorySelect = document.getElementById('entry-category-select');
+    const entryCategoryCustom = document.getElementById('entry-category-custom');
+
+    const entryAmount = document.getElementById('entry-amount');
+    const entryDate = document.getElementById('entry-date');
+    const entryNote = document.getElementById('entry-note');
+    const entrySubmit = document.getElementById('entry-submit');
+    const entryErr = document.getElementById('entry-error');
+
+    const listErr = document.getElementById('list-error');
+    const entryEmpty = document.getElementById('entry-empty');
+    const entryTable = document.getElementById('entry-table');
+    const entryTbody = document.getElementById('entry-tbody');
+
+    const filterStart = document.getElementById('filter-start');
+    const filterEnd = document.getElementById('filter-end');
+    const filterType = document.getElementById('filter-type');
+    const filterSort = document.getElementById('filter-sort');
+    const filterApply = document.getElementById('filter-apply');
+
+    const sumIncomeEl = document.getElementById('sum-income');
+    const sumExpenseEl = document.getElementById('sum-expense');
+    const sumBalanceEl = document.getElementById('sum-balance');
+    const categorySummaryEl = document.getElementById('category-summary');
+
+    const backupCreateBtn = document.getElementById('backup-create');
+    const backupStatus = document.getElementById('backup-status');
+    const backupErr = document.getElementById('backup-error');
+    const backupTable = document.getElementById('backup-table');
+    const backupTbody = document.getElementById('backup-tbody');
+    const backupEmpty = document.getElementById('backup-empty');
+
+    const exportCsvBtn = document.getElementById('export-csv');
+    const exportXlsxBtn = document.getElementById('export-xlsx');
+    let editingEntryId = null;
+
+    const paginationEl = document.getElementById('pagination');
+    const pagePrevBtn = document.getElementById('page-prev');
+    const pageNextBtn = document.getElementById('page-next');
+    const pageInfoEl = document.getElementById('page-info');
+    let currentPage = 1;
+    let totalPages = 1;
+    let totalRecords = 0;
+    const PAGE_SIZE = 15;
+
+    function gotoLogin() {
+        window.location.href = '/';
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+        gotoLogin();
+        return;
+    }
+
+    logoutBtn.addEventListener('click', function () {
+        localStorage.removeItem(TOKEN_KEY);
+        gotoLogin();
+    });
+
+    function loadUser() {
+        userErr.textContent = '';
+        fetch('/api/me', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                userErr.textContent = res.message || '加载用户信息失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            if (!res.data || !res.data.user) {
+                userErr.textContent = '返回数据不完整';
+                return;
+            }
+            const u = res.data.user;
+            userNameEl.textContent = u.display_name || u.username;
+            u1.textContent = u.username;
+            u2.textContent = u.display_name || '-';
+            u3.textContent = (u.created_at || '-').split('T')[0];
+        }).catch(function (err) {
+            console.error(err);
+            userErr.textContent = '网络或服务器异常';
+        });
+    }
+
+    function loadEntries() {
+        listErr.textContent = '';
+        entryEmpty.style.display = 'none';
+        entryTable.style.display = 'none';
+        paginationEl.style.display = 'none';
+        entryTbody.innerHTML = '';
+        categorySummaryEl.textContent = '';
+        sumIncomeEl.textContent = '0.00';
+        sumExpenseEl.textContent = '0.00';
+        sumBalanceEl.textContent = '0.00';
+
+        const params = new URLSearchParams();
+        params.set('page', currentPage.toString());
+        params.set('page_size', PAGE_SIZE.toString());
+        if (filterStart.value) {
+            params.set('start', filterStart.value);
+        }
+        if (filterEnd.value) {
+           params.set('end', filterEnd.value);
+        }
+        if (filterType.value) {
+            params.set('type', filterType.value);
+        }
+        // 类别多选
+        const catChecked = [];
+        document.querySelectorAll('.filter-category:checked').forEach(function (cb) {
+            catChecked.push(cb.value);
+        });
+        if (catChecked.length) {
+            params.set('categories', catChecked.join(','));
+        }
+
+        // 排序
+        if (filterSort.value) {
+            params.set('sort', filterSort.value);
+        }
+
+        fetch('/api/entries?' + params.toString(), {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                listErr.textContent = res.message || '加载账目失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            const data = res.data || {};
+            const items = data.items || [];
+
+            // 计算分页信息（兼容后端返回或前端计算）
+            if (data.total !== undefined) {
+                totalRecords = data.total;
+                totalPages = Math.ceil(totalRecords / PAGE_SIZE);
+            } else if (data.total_pages !== undefined) {
+                totalPages = data.total_pages;
+                totalRecords = (totalPages - 1) * PAGE_SIZE + items.length;
+            } else {
+                // 后端没有返回分页信息，根据返回数据判断
+                if (items.length >= PAGE_SIZE) {
+                    totalPages = currentPage + 1; // 假设还有下一页
+                } else {
+                    totalPages = currentPage;
+                }
+                totalRecords = (currentPage - 1) * PAGE_SIZE + items.length;
+            }
+
+            if (data.summary) {
+                sumIncomeEl.textContent = data.summary.total_income || '0.00';
+                sumExpenseEl.textContent = data.summary.total_expense || '0.00';
+                sumBalanceEl.textContent = data.summary.balance || '0.00';
+
+                const cats = data.summary.by_category || [];
+                if (cats.length) {
+                    const parts = cats.map(function (c) {
+                        var seg = c.category + '：';
+                        if (c.income && c.income !== '0.00') {
+                            seg += '收入 ' + c.income + ' 元 ';
+                        }
+                        if (c.expense && c.expense !== '0.00') {
+                            seg += '支出 ' + c.expense + ' 元';
+                        }
+                        return seg;
+                    });
+                    categorySummaryEl.textContent = '按类别统计：' + parts.join('； ');
+                }
+            }
+
+            if (!items.length) {
+                entryEmpty.style.display = 'block';
+                return;
+        }
+
+            items.forEach(function (e) {
+                const tr = document.createElement('tr');
+
+                const tdTime = document.createElement('td');
+                const occurred = e.occurred_at || '';
+                tdTime.textContent = occurred ? occurred.slice(0, 10) : '';
+
+                const tdType = document.createElement('td');
+                tdType.textContent = e.type === 'income' ? '收入' : '支出';
+
+                const tdCat = document.createElement('td');
+                tdCat.textContent = e.category || '-';
+
+                const tdAmt = document.createElement('td');
+                tdAmt.textContent = e.amount || '0.00';
+                tdAmt.className = e.type === 'income' ? 'amount-income' : 'amount-expense';
+
+                const tdNote = document.createElement('td');
+                tdNote.className = 'note';
+                tdNote.textContent = e.note || '';
+
+                const tdOp = document.createElement('td');
+                const btnEdit = document.createElement('button');
+                btnEdit.textContent = '编辑';
+                btnEdit.className = 'btn';
+                btnEdit.style.marginRight = '4px';
+                btnEdit.setAttribute('data-op', 'edit');
+                btnEdit.setAttribute('data-id', e.id);
+
+                const btnDelete = document.createElement('button');
+                btnDelete.textContent = '删除';
+                btnDelete.className = 'btn btn-danger';
+                btnDelete.setAttribute('data-op', 'delete');
+                btnDelete.setAttribute('data-id', e.id);
+
+                tdOp.appendChild(btnEdit);
+                tdOp.appendChild(btnDelete);
+
+                tr.appendChild(tdTime);
+                tr.appendChild(tdType);
+                tr.appendChild(tdCat);
+                tr.appendChild(tdAmt);
+                tr.appendChild(tdNote);
+                tr.appendChild(tdOp);
+
+                tr.setAttribute('data-id', e.id);
+                tr.setAttribute('data-type', e.type);
+                tr.setAttribute('data-category', e.category || '');
+                tr.setAttribute('data-amount', e.amount || '0.00');
+                tr.setAttribute('data-note', e.note || '');
+                tr.setAttribute('data-occurred', e.occurred_at || '');
+
+                entryTbody.appendChild(tr);
+            });
+
+            entryTable.style.display = 'table';
+            
+            // 显示分页控件（当总页数>1或当前不在第1页时显示）
+            if (totalPages > 1 || currentPage > 1) {
+                paginationEl.style.display = 'block';
+                pageInfoEl.textContent = '第 ' + currentPage + ' / ' + totalPages + ' 页（共 ' + totalRecords + ' 条）';
+                pagePrevBtn.disabled = currentPage <= 1;
+                pageNextBtn.disabled = items.length < PAGE_SIZE; // 如果当前页不足15条，说明没有下一页
+            }
+        }).catch(function (err) {
+            console.error(err);
+            listErr.textContent = '网络或服务器异常';
+        });
+    }
+
+    entryForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        entryErr.textContent = '';
+
+        const type = entryType.value;
+        let category = entryCategorySelect.value;
+        const customCat = entryCategoryCustom.value.trim();
+        const amountStr = entryAmount.value;
+        const note = entryNote.value.trim();
+        const dateVal = entryDate.value;
+
+        // 类别选择：预设或其他
+        if (category === '其他') {
+            category = '其他';
+        }else if (!category) {
+            entryErr.textContent = '请选择类别';
+            return;
+        }
+
+        // 金额格式检查：>0 的数字
+        const amountNum = parseFloat(amountStr);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            entryErr.textContent = '请输入有效金额';
+            return;
+        }
+
+        // 日期不能晚于今天
+        const payload = {
+            type: type,
+            category: category,
+            amount: amountStr,
+            note: note
+        };
+
+        // 处理日期：如果为空使用今天，如果有值则验证不能晚于今天
+        let occurredAt = dateVal;
+        if (!occurredAt) {
+            // 日期为空，使用今天
+            occurredAt = new Date().toISOString().slice(0, 10);
+        } else {
+            // 日期有值，验证不能晚于今天
+            const todayStr = new Date().toISOString().slice(0, 10);
+            if (occurredAt > todayStr) {
+                entryErr.textContent = '交易日期不能晚于今天';
+                return;
+            }
+        }
+        payload.occurred_at = occurredAt + 'T00:00:00';
+
+        let url = '/api/entries';
+        let method = 'POST';
+        if (editingEntryId) {
+            url = '/api/entries/' + editingEntryId;
+            method = 'PUT';
+        }
+
+        entrySubmit.disabled = true;
+        entrySubmit.textContent = editingEntryId ? '保存修改中...' : '保存中...';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                entryErr.textContent = res.message || '保存失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            editingEntryId = null;
+            entryType.value = 'expense';
+            entryCategorySelect.value = '';
+            entryCategoryCustom.value = '';
+            entryCategoryCustom.style.display = 'none';
+            entryAmount.value = '';
+            entryNote.value = '';
+            entryDate.value = '';
+            entrySubmit.textContent = '保存';
+            currentPage = 1;
+            loadEntries();
+        }).catch(function (err) {
+            console.error(err);
+            entryErr.textContent = '网络或服务器异常';
+        }).finally(function () {
+            entrySubmit.disabled = false;
+        });
+    });
+
+    entryCategorySelect.addEventListener('change', function () {
+            entryCategoryCustom.style.display = 'none';
+            entryCategoryCustom.value = '';
+    });
+    entryCategoryCustom.style.display = 'none';
+
+    entryTbody.addEventListener('click', function (e) {
+        const target = e.target;
+        if (target.tagName !== 'BUTTON') return;
+
+        const id = target.getAttribute('data-id');
+        const op = target.getAttribute('data-op');
+        if (!id || !op) return;
+
+        if (op === 'edit') {
+            const tr = target.closest('tr');
+            if (!tr) return;
+
+            editingEntryId = id;
+            entryType.value = tr.getAttribute('data-type') || 'expense';
+            const cat = tr.getAttribute('data-category') || '';
+            const presets = ['餐饮','交通','购物','住房','工资','投资'];
+            if (presets.indexOf(cat) >= 0) {
+                entryCategorySelect.value = cat;
+                entryCategoryCustom.value = '';
+                entryCategoryCustom.style.display = 'none';
+            } else if (cat) {
+                entryCategorySelect.value = '其他';
+                entryCategoryCustom.value = '';
+                entryCategoryCustom.style.display = 'none';
+            } else {
+                entryCategorySelect.value = '';
+                entryCategoryCustom.value = '';
+                entryCategoryCustom.style.display = 'none';
+            }
+
+            entryAmount.value = tr.getAttribute('data-amount') || '';
+            entryNote.value = tr.getAttribute('data-note') || '';
+            const occurred = tr.getAttribute('data-occurred') || '';
+            entryDate.value = occurred ? occurred.slice(0, 10) : '';
+            entrySubmit.textContent = '保存修改';
+            entryForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else if (op === 'delete') {
+            if (!confirm('确认删除这条记录吗？')) return;
+
+            fetch('/api/entries/' + id, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).then(function (resp) {
+                return resp.json();
+            }).then(function (res) {
+                if (res.code !== 0) {
+                    alert(res.message || '删除失败');
+                    if (res.code === 40101) {
+                        setTimeout(gotoLogin, 800);
+                    }
+                    return;
+                }
+                if (editingEntryId === id) {
+                    editingEntryId = null;
+                    entrySubmit.textContent = '保存';
+                }
+                currentPage = 1; 
+                loadEntries();
+            }).catch(function (err) {
+                console.error(err);
+                alert('网络或服务器异常');
+            });
+        }
+    });
+
+    filterApply.addEventListener('click', function () {
+        currentPage = 1;
+        loadEntries();
+    });
+
+    pagePrevBtn.addEventListener('click', function () {
+        if (currentPage > 1) {
+            currentPage--;
+            loadEntries();
+            window.scrollTo({top: 0, behavior: 'smooth'}); // 滚动到顶部
+        }
+    });
+
+    pageNextBtn.addEventListener('click', function () {
+        currentPage++;
+        loadEntries();
+        window.scrollTo({top: 0, behavior: 'smooth'}); // 滚动到顶部
+    });
+
+    function formatSize(size) {
+        if (size > 1024 * 1024) {
+            return (size / 1024 / 1024).toFixed(1) + ' MB';
+        } else if (size > 1024) {
+            return (size / 1024).toFixed(1) + ' KB';
+        }
+        return size + ' B';
+    }
+
+    function loadBackups() {
+        backupErr.textContent = '';
+        backupEmpty.style.display = 'none';
+        backupTable.style.display = 'none';
+        backupTbody.innerHTML = '';
+
+        fetch('/api/backups', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                backupErr.textContent = res.message || '加载备份列表失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            const items = (res.data && res.data.items) || [];
+            if (!items.length) {
+                backupEmpty.style.display = 'block';
+                return;
+            }
+
+            items.forEach(function (b) {
+                const tr = document.createElement('tr');
+
+                const tdId = document.createElement('td');
+                tdId.textContent = b.id;
+
+                const tdName = document.createElement('td');
+                tdName.textContent = b.file_name;
+
+                const tdSize = document.createElement('td');
+                tdSize.textContent = formatSize(b.size || 0);
+
+                const tdTime = document.createElement('td');
+                tdTime.textContent = (b.created_at || '').replace('T', ' ').slice(0, 19);
+
+                const tdOp = document.createElement('td');
+                const btnDownload = document.createElement('button');
+                btnDownload.textContent = '下载';
+                btnDownload.className = 'btn';
+                btnDownload.setAttribute('data-op', 'download');
+                btnDownload.setAttribute('data-id', b.id);
+
+                const btnRestore = document.createElement('button');
+                btnRestore.textContent = '恢复';
+                btnRestore.className = 'btn';
+                btnRestore.style.marginLeft = '4px';
+                btnRestore.setAttribute('data-op', 'restore');
+                btnRestore.setAttribute('data-id', b.id);
+
+                const btnDelete = document.createElement('button');
+                btnDelete.textContent = '删除';
+                btnDelete.className = 'btn btn-danger';
+                btnDelete.style.marginLeft = '4px';
+                btnDelete.setAttribute('data-op', 'delete');
+                btnDelete.setAttribute('data-id', b.id);
+
+                tdOp.appendChild(btnDownload);
+                tdOp.appendChild(btnRestore);
+                tdOp.appendChild(btnDelete);
+
+                tr.appendChild(tdId);
+                tr.appendChild(tdName);
+                tr.appendChild(tdSize);
+                tr.appendChild(tdTime);
+                tr.appendChild(tdOp);
+
+                backupTbody.appendChild(tr);
+            });
+
+            backupTable.style.display = 'table';
+        }).catch(function (err) {
+            console.error(err);
+            backupErr.textContent = '网络或服务器异常';
+        });
+    }
+
+    backupCreateBtn.addEventListener('click', function () {
+        backupErr.textContent = '';
+        backupStatus.textContent = '正在生成备份...';
+        backupCreateBtn.disabled = true;
+
+        fetch('/api/backups', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                backupErr.textContent = res.message || '生成备份失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            backupStatus.textContent = '备份已生成';
+            loadBackups();
+        }).catch(function (err) {
+            console.error(err);
+            backupErr.textContent = '网络或服务器异常';
+        }).finally(function () {
+            backupCreateBtn.disabled = false;
+        });
+    });
+
+    backupTbody.addEventListener('click', function (e) {
+        const target = e.target;
+        if (target.tagName !== 'BUTTON') return;
+
+        const id = target.getAttribute('data-id');
+        const op = target.getAttribute('data-op');
+        if (!id || !op) return;
+
+        if (op === 'download') {
+            const url = '/api/backups/' + id + '/download?token=' + encodeURIComponent(token);
+            window.location.href = url;
+        } else if (op === 'restore') {
+            if (!confirm('确认从该备份恢复吗？当前账户所有账目将被这个备份覆盖。建议先生成一个新的备份再恢复。')) {
+                return;
+            }
+            fetch('/api/backups/' + id + '/restore', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).then(function (resp) {
+                return resp.json();
+            }).then(function (res) {
+                if (res.code !== 0) {
+                    alert(res.message || '恢复失败');
+                    if (res.code === 40101) {
+                        setTimeout(gotoLogin, 800);
+                    }
+                    return;
+                }
+                alert('恢复成功，账目已从备份中还原。');
+                loadEntries();
+            }).catch(function (err) {
+                console.error(err);
+                alert('网络或服务器异常');
+            });
+        } else if (op === 'delete') {
+            if (!confirm('确认删除这个备份吗？')) return;
+            fetch('/api/backups/' + id, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            }).then(function (resp) {
+                return resp.json();
+            }).then(function (res) {
+                if (res.code !== 0) {
+                    alert(res.message || '删除备份失败');
+                    if (res.code === 40101) {
+                        setTimeout(gotoLogin, 800);
+                    }
+                    return;
+                }
+                loadBackups();
+            }).catch(function (err) {
+                console.error(err);
+                alert('网络或服务器异常');
+            });
+        }
+    });
+
+    //导出CSV
+    exportCsvBtn.addEventListener('click', function () {
+        window.location.href = '/api/export/csv?token=' + encodeURIComponent(token);
+    });
+
+    //导出Excel
+    exportXlsxBtn.addEventListener('click', function () {
+        window.location.href = '/api/export/xlsx?token=' + encodeURIComponent(token);
+    });
+
+    loadUser();
+    loadEntries();
+    loadBackups();
+})();
+</script>
+</body>
+</html>

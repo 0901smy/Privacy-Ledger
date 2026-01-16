@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ .title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+        }
+        .topbar {
+            height: 52px;
+            background: #3478f6;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+        .topbar-title {
+            font-size: 18px;
+        }
+        .topbar-user {
+            font-size: 14px;
+        }
+        .topbar-user a {
+            color: #fff;
+            text-decoration: none;
+            margin-right: 12px;
+            font-size: 13px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 24px auto;
+            padding: 0 16px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.04);
+            box-sizing: border-box;
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+        .btn {
+            border: none;
+            background: #3478f6;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #eceff5;
+            text-align: left;
+        }
+        th {
+            background: #f3f5f9;
+            color: #555;
+        }
+        .empty {
+            padding: 12px 0;
+            color: #999;
+            text-align: center;
+        }
+        .error {
+            color: #e53935;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .action-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .op-add { color: #2e7d32; font-weight: 500; }
+        .op-edit { color: #f57c00; font-weight: 500; }
+        .op-delete { color: #e53935; font-weight: 500; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div class="topbar-title">个人记账系统 - 历史操作</div>
+    <div class="topbar-user">
+        <a href="/dashboard">返回主页</a>
+        <span id="user-name">加载中...</span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <div class="action-header">
+            <h2>账目操作记录</h2>
+            <a href="/logs" class="btn">查看完整日志</a>
+        </div>
+        <p style="font-size:13px;color:#666;margin-top:0;">
+            这里仅显示账目的添加、修改、删除操作记录。如需查看所有系统操作日志，请点击右上角"查看完整日志"。
+        </p>
+        <div id="log-error" class="error"></div>
+        <div id="log-list-wrapper">
+            <div class="empty" id="log-empty" style="display:none;">暂无操作记录</div>
+            <table id="log-table" style="display:none;">
+                <thead>
+                <tr>
+                    <th>操作</th>
+                    <th>类型</th>
+                    <th>类别</th>
+                    <th>金额</th>
+                    <th>备注</th>
+                    <th>账目日期</th>
+                    <th>操作时间</th>
+                    <!-- <th>IP地址</th> -->
+                </tr>
+                </thead>
+                <tbody id="log-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const TOKEN_KEY = 'pl_token';
+
+    const userNameEl = document.getElementById('user-name');
+    const logErr = document.getElementById('log-error');
+    const logEmpty = document.getElementById('log-empty');
+    const logTable = document.getElementById('log-table');
+    const logTbody = document.getElementById('log-tbody');
+
+    function gotoLogin() {
+        window.location.href = '/';
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+        gotoLogin();
+        return;
+    }
+
+    function loadUser() {
+        fetch('/api/me', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+            if (res.data && res.data.user) {
+                const u = res.data.user;
+                userNameEl.textContent = u.display_name || u.username;
+            }
+        }).catch(function () {});
+    }
+
+    function loadHistory() {
+        logErr.textContent = '';
+        logEmpty.style.display = 'none';
+        logTable.style.display = 'none';
+        logTbody.innerHTML = '';
+
+        fetch('/api/history?page=1&page_size=50', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function (resp) {
+            return resp.json();
+        }).then(function (res) {
+            if (res.code !== 0) {
+                logErr.textContent = res.message || '加载失败';
+                if (res.code === 40101) {
+                    setTimeout(gotoLogin, 800);
+                }
+                return;
+            }
+
+            const items = (res.data && res.data.items) || [];
+            if (!items.length) {
+                logEmpty.style.display = 'block';
+                return;
+            }
+
+            items.forEach(function (log) {
+                const tr = document.createElement('tr');
+
+                const tdOp = document.createElement('td');
+                tdOp.textContent = log.operation || '-';
+                if (log.operation === '添加账目') {
+                    tdOp.className = 'op-add';
+                } else if (log.operation === '修改账目') {
+                    tdOp.className = 'op-edit';
+                } else if (log.operation === '删除账目') {
+                    tdOp.className = 'op-delete';
+                }
+
+                const tdType = document.createElement('td');
+                tdType.textContent = log.type || '-';
+
+                const tdCat = document.createElement('td');
+                tdCat.textContent = log.category || '-';
+
+                const tdAmt = document.createElement('td');
+                tdAmt.textContent = log.amount || '-';
+
+                const tdNote = document.createElement('td');
+                tdNote.textContent = log.note || '-';
+
+                const tdOccurred = document.createElement('td');
+                if (log.occurred_at) {
+                    tdOccurred.textContent = log.occurred_at.slice(0, 10);
+                } else {
+                    tdOccurred.textContent = '-';
+                }
+
+                const tdTime = document.createElement('td');
+                tdTime.textContent = (log.created_at || '').replace('T', ' ').slice(0, 19);
+
+                // const tdIP = document.createElement('td');
+                // tdIP.textContent = log.ip || '-';
+
+                tr.appendChild(tdOp);
+                tr.appendChild(tdType);
+                tr.appendChild(tdCat);
+                tr.appendChild(tdAmt);
+                tr.appendChild(tdNote);
+                tr.appendChild(tdOccurred);
+                tr.appendChild(tdTime);
+                //tr.appendChild(tdIP);
+
+                logTbody.appendChild(tr);
+            });
+
+            logTable.style.display = 'table';
+        }).catch(function (err) {
+            console.error(err);
+            logErr.textContent = '网络或服务器异常';
+        });
+    }
+
+    loadUser();
+    loadHistory();
+})();
+</script>
+</body>
+</html>

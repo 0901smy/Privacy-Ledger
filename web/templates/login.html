@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>{{ .title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
+        .page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: #fff;
+            padding: 32px 40px;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.06);
+            width: 380px;
+            box-sizing: border-box;
+        }
+        .title {
+            margin: 0 0 8px;
+            font-size: 22px;
+            text-align: center;
+        }
+        .subtitle {
+            margin: 0 0 16px;
+            font-size: 13px;
+            color: #888;
+            text-align: center;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #e0e3eb;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 14px;
+            cursor: pointer;
+            color: #666;
+        }
+        .tab.active {
+            color: #3478f6;
+            font-weight: 500;
+            border-bottom: 2px solid #3478f6;
+        }
+        .form {
+            display: none;
+        }
+        .form.active {
+            display: block;
+        }
+        .form-item {
+            margin-bottom: 16px;
+        }
+        .form-item label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #333;
+        }
+        .form-item input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px 10px;
+            border-radius: 4px;
+            border: 1px solid #d3d7e0;
+            font-size: 14px;
+            outline: none;
+        }
+        .form-item input:focus {
+            border-color: #3478f6;
+            box-shadow: 0 0 0 2px rgba(52,120,246,.15);
+        }
+        .btn {
+            width: 100%;
+            padding: 10px 0;
+            border: none;
+            border-radius: 4px;
+            background: #3478f6;
+            color: #fff;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .btn:disabled {
+            background: #aac4ff;
+            cursor: not-allowed;
+        }
+        .error {
+            margin-top: 6px;
+            font-size: 13px;
+            color: #e53935;
+            min-height: 18px;
+        }
+        .tips {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #999;
+            text-align: left;
+            line-height: 1.4;
+        }
+        .tips code {
+            background: #f0f2f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="card">
+        <h1 class="title">个人记账系统</h1>
+
+        <div class="tabs">
+            <div id="tab-login" class="tab active">登录</div>
+            <div id="tab-register" class="tab">注册</div>
+        </div>
+
+        <!-- 登录表单 -->
+        <form id="login-form" class="form active">
+            <div class="form-item">
+                <label for="login-username">用户名</label>
+                <input id="login-username" name="username" type="text" required placeholder="请输入用户名">
+            </div>
+            <div class="form-item">
+                <label for="login-password">密码</label>
+                <input id="login-password" name="password" type="password" required placeholder="请输入密码">
+            </div>
+            <button id="login-btn" class="btn" type="submit">登录</button>
+            <div id="login-error" class="error"></div>
+        </form>
+
+        <!-- 注册表单 -->
+        <form id="register-form" class="form">
+            <div class="form-item">
+                <label for="reg-username">用户名（3-20位，仅字母、数字、下划线）</label>
+                <input id="reg-username" type="text" required placeholder="例如: user_123">
+            </div>
+            <div class="form-item">
+                <label for="reg-password">密码（8-32位，包含大小写字母和数字）</label>
+                <input id="reg-password" type="password" required placeholder="例如: Abc12345">
+            </div>
+            <div class="form-item">
+                <label for="reg-password2">确认密码</label>
+                <input id="reg-password2" type="password" required placeholder="再次输入密码">
+            </div>
+            <div class="form-item">
+                <label for="reg-display-name">昵称（可选）</label>
+                <input id="reg-display-name" type="text" maxlength="64" placeholder="显示名称">
+            </div>
+            <button id="reg-btn" class="btn" type="submit">注册</button>
+            <div id="reg-error" class="error"></div>
+        </form>
+
+        <div class="tips">
+            · 用户名不区分大小写，但必须唯一。<br>
+            · 推荐使用强密码，并妥善保管。<br>
+            · 登录成功将跳转到主页，token 存储在本地浏览器。
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+
+    const loginUsername = document.getElementById('login-username');
+    const loginPassword = document.getElementById('login-password');
+    const loginBtn = document.getElementById('login-btn');
+    const loginErr = document.getElementById('login-error');
+
+    const regUsername = document.getElementById('reg-username');
+    const regPassword = document.getElementById('reg-password');
+    const regPassword2 = document.getElementById('reg-password2');
+    const regDisplayName = document.getElementById('reg-display-name');
+    const regBtn = document.getElementById('reg-btn');
+    const regErr = document.getElementById('reg-error');
+
+    const TOKEN_KEY = 'pl_token';
+
+    function switchTab(tab) {
+        if (tab === 'login') {
+            tabLogin.classList.add('active');
+            tabRegister.classList.remove('active');
+            loginForm.classList.add('active');
+            registerForm.classList.remove('active');
+        } else {
+            tabLogin.classList.remove('active');
+            tabRegister.classList.add('active');
+            loginForm.classList.remove('active');
+            registerForm.classList.add('active');
+        }
+        loginErr.textContent = '';
+        regErr.textContent = '';
+    }
+
+    tabLogin.addEventListener('click', function () {
+        switchTab('login');
+    });
+    tabRegister.addEventListener('click', function () {
+        switchTab('register');
+    });
+
+    function gotoDashboard() {
+        window.location.href = '/dashboard';
+    }
+
+    async function doLogin(username, password) {
+        loginErr.textContent = '';
+        loginBtn.disabled = true;
+        loginBtn.textContent = '登录中…';
+
+        try {
+            const resp = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const res = await resp.json();
+            if (res.code !== 0) {
+                loginErr.textContent = res.message || '登录失败';
+                return false;
+            }
+            if (res.data && res.data.token) {
+                localStorage.setItem(TOKEN_KEY, res.data.token);
+            }
+            gotoDashboard();
+            return true;
+        } catch (err) {
+            console.error(err);
+            loginErr.textContent = '网络或服务器异常';
+            return false;
+        } finally {
+            loginBtn.disabled = false;
+            loginBtn.textContent = '登录';
+        }
+    }
+
+    // 登录表单提交
+    loginForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        loginErr.textContent = '';
+
+        const username = loginUsername.value.trim();
+        const password = loginPassword.value;
+
+        if (!username || !password) {
+            loginErr.textContent = '请输入用户名和密码';
+            return;
+        }
+        doLogin(username, password);
+    });
+
+    // 注册表单提交
+    registerForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        regErr.textContent = '';
+
+        const username = regUsername.value.trim();
+        const pwd = regPassword.value;
+        const pwd2 = regPassword2.value;
+        const displayName = regDisplayName.value.trim();
+
+        // 用户名校验：3-20位，只能字母数字下划线
+        const usernameRe = /^[A-Za-z0-9_]{3,20}$/;
+        if (!usernameRe.test(username)) {
+            regErr.textContent = '用户名必须为3-20位字母、数字或下划线';
+            return;
+        }
+
+        // 密码强度：8-32位，必须包含大小写字母和数字
+        const strongPwdRe = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,32}$/;
+        if (!strongPwdRe.test(pwd)) {
+            regErr.textContent = '密码需8-32位，且包含大写、小写字母和数字';
+            return;
+        }
+
+        if (pwd !== pwd2) {
+            regErr.textContent = '两次输入的密码不一致';
+            return;
+        }
+
+        regBtn.disabled = true;
+        regBtn.textContent = '注册中…';
+
+        try {
+            const resp = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: pwd,
+                    confirm_password: pwd2,
+                    display_name: displayName
+                })
+            });
+            const res = await resp.json();
+            if (res.code !== 0) {
+                regErr.textContent = res.message || '注册失败';
+                return;
+            }
+
+            // 注册成功后自动登录
+            await doLogin(username, pwd);
+        } catch (err) {
+            console.error(err);
+            regErr.textContent = '网络或服务器异常';
+        } finally {
+            regBtn.disabled = false;
+            regBtn.textContent = '注册';
+        }
+    });
+
+    // 如果已经有 token，可以直接跳主页（可选）
+    (function autoRedirectIfLoggedIn() {
+        const token = localStorage.getItem(TOKEN_KEY);
+        if (token) {
+            // 不强制跳转，防止 token 过期；若想自动跳转可以解除注释
+            // gotoDashboard();
+        }
+    })();
+})();
+</script>
+</body>
+</html>
